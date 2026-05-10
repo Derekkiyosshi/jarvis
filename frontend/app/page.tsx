@@ -4,7 +4,9 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 
 type OrbState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'offline'
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3131'
+const BACKEND_URL = typeof window !== 'undefined'
+  ? window.location.origin
+  : 'http://localhost:3131'
 const SESSION_ID = 'derek-main'
 
 export default function Jarvis() {

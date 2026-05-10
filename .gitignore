@@ -1,5 +1,8 @@
 node_modules/
 .next/
+frontend/out/
 *.env.local
 backend/memory.json
 gen-icons.mjs
+cloudflared.exe
+tunnel.log

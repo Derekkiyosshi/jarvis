@@ -1,7 +1,6 @@
 const express = require('express')
 const cors = require('cors')
 const { spawn } = require('child_process')
-const { v4: uuidv4 } = require('uuid')
 const fs = require('fs')
 const path = require('path')
 
@@ -9,12 +8,18 @@ const app = express()
 const PORT = 3131
 const MEMORY_FILE = path.join(__dirname, 'memory.json')
 const MAX_HISTORY = 10
+const FRONTEND_DIR = path.join(__dirname, '..', 'frontend', 'out')
 
 app.use(cors())
 app.use(express.json())
 
+// Serve static frontend if built
+if (fs.existsSync(FRONTEND_DIR)) {
+  app.use(express.static(FRONTEND_DIR))
+}
+
 function loadMemory(sessionId) {
-  if (!fs.existsSync(MEMORY_FILE)) return {}
+  if (!fs.existsSync(MEMORY_FILE)) return []
   try {
     const data = JSON.parse(fs.readFileSync(MEMORY_FILE, 'utf-8'))
     return data[sessionId] || []
@@ -77,7 +82,7 @@ app.post('/chat', async (req, res) => {
     console.error('Claude stderr:', data.toString())
   })
 
-  child.on('close', (code) => {
+  child.on('close', () => {
     history.push({ user: message, assistant: fullResponse.trim() })
     saveMemory(sessionId, history)
     res.end()
@@ -101,7 +106,22 @@ app.delete('/memory/:sessionId', (req, res) => {
   res.json({ ok: true })
 })
 
+// SPA fallback — serve index.html for all unmatched routes
+app.get('*', (req, res) => {
+  const indexPath = path.join(FRONTEND_DIR, 'index.html')
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath)
+  } else {
+    res.status(404).send('Frontend não buildado. Rode: cd frontend && npm run build')
+  }
+})
+
 app.listen(PORT, () => {
-  console.log(`\n🟢 Jarvis backend rodando em http://localhost:${PORT}`)
-  console.log(`   Aguardando comandos do Derek...\n`)
+  console.log(`\n🟢 Jarvis rodando em http://localhost:${PORT}`)
+  if (fs.existsSync(FRONTEND_DIR)) {
+    console.log(`   Frontend: http://localhost:${PORT}`)
+  } else {
+    console.log(`   ⚠️  Frontend não encontrado — rode: cd frontend && npm run build`)
+  }
+  console.log(`   API: http://localhost:${PORT}/health\n`)
 })
